@@ -8,92 +8,90 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserDaoJDBCImpl implements UserDao {
-    private final Statement statement;
+    private static final Connection connection = Util.getConnection();
 
     public UserDaoJDBCImpl() {
-        try {
-            this.statement = new Util().getConnection().createStatement();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     public void createUsersTable() {
-        try {
-            statement.execute("""
-                    CREATE TABLE `pp1134`.`users` (
-                      `id` INT AUTO_INCREMENT,
-                      `name` VARCHAR(45),
-                      `lastName` VARCHAR(45),
-                      `age` INT,
-                      PRIMARY KEY (`id`))""");
+        String sql = "CREATE TABLE IF NOT EXISTS users(" +
+                "id INT NOT NULL AUTO_INCREMENT," +
+                "name VARCHAR(45), " +
+                "lastName VARCHAR(45), " +
+                "age INT, " +
+                "PRIMARY KEY(id));";
+
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
     public void dropUsersTable() {
-        try {
-            statement.execute("DROP TABLE pp1134.users;");
-        } catch (SQLException ignored) {
+        String sql = "DROP TABLE IF EXISTS users;";
+
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 
     public void saveUser(String name, String lastName, byte age) {
-        try {
-            PreparedStatement preparedStatement = statement.getConnection().
-                    prepareStatement("insert into pp1134.users(name, lastName, age) values(?, ?, ?);");
+        String sql = "INSERT INTO users (name, lastName, age) VALUES (?, ?, ?);";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, name);
             preparedStatement.setString(2, lastName);
             preparedStatement.setByte(3, age);
-            preparedStatement.execute();
-            System.out.println("User с именем - " + name + " добавлен в базу данных");
+
+            preparedStatement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
     public void removeUserById(long id) {
-        try {
-            statement.execute("DELETE FROM pp1134.users where id = " + id);
+        String sql = "DELETE FROM users WHERE id = ?;";
+
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setLong(1, id);
+
+            preparedStatement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
     public List<User> getAllUsers() {
-        List<User> usersList = new ArrayList<>();
-        try {
-            PreparedStatement preparedStatement = statement.getConnection().prepareStatement("SELECT * FROM pp1134.users;");
-            preparedStatement.execute();
-            ResultSet resultSet = preparedStatement.executeQuery();
-            while(resultSet.next()) {
-                Long id = resultSet.getLong(1);
-                String name = resultSet.getString(2);
-                String lastName = resultSet.getString(3);
-                Byte age = resultSet.getByte(4);
-                User user = new User(name, lastName, age);
-                user.setId(id);
-                usersList.add(user);
+        List<User> userList = new ArrayList<>();
+
+        String sql = "SELECT * FROM users;";
+
+        try (Statement statement = connection.createStatement()) {
+            ResultSet resultSet = statement.executeQuery(sql);
+
+            while (resultSet.next()) {
+                User user = new User();
+                user.setId(resultSet.getLong("id"));
+                user.setName(resultSet.getString("name"));
+                user.setLastName(resultSet.getString("lastName"));
+                user.setAge(resultSet.getByte("age"));
+
+                userList.add(user);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-        System.out.println(usersList);
-        return usersList;
+        return userList;
     }
 
     public void cleanUsersTable() {
-        try {
-            statement.execute("DELETE FROM pp1134.users");
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-    }
+        String sql = "TRUNCATE TABLE users;";
 
-    public void close() {
-        try {
-            statement.getConnection().close();
+        try (Statement statement = connection.createStatement()) {
+            statement.execute(sql);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
