@@ -5,28 +5,17 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class Util {
-    private static final String url = "jdbc:mysql://localhost:3306";
+    private static final String url = "jdbc:mysql://localhost:3306/pp1134";
     private static final String user = "root";
     private static final String pass = "Bay7013782!";
-    private final Connection connection;
+    private static Connection connection;
 
-    public Util() {
+    public static Connection getConnection() {
         try {
             connection = DriverManager.getConnection(url, user, pass);
-        } catch (SQLException e) {
+        }catch (SQLException e){
             throw new RuntimeException(e);
         }
-    }
-
-    public Connection getConnection() {
         return connection;
-    }
-
-    public void close() {
-        try {
-            connection.close();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
     }
 }
